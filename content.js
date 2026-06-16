@@ -11,6 +11,26 @@
 //   { subject, title, bodyHtml, bodyText }
 
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, isAbsolute, resolve } from 'node:path';
+
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Read the content file, tolerating different working directories. Serverless
+ * hosts (e.g. Vercel) run functions from a CWD that isn't the project root, so a
+ * bare relative path like "content.md" won't resolve against the process CWD.
+ * Try the path as given (CWD-relative / absolute) first, then fall back to a path
+ * resolved against this module's directory (the project root).
+ */
+async function readContentFile(path) {
+  if (isAbsolute(path)) return readFile(path, 'utf8');
+  try {
+    return await readFile(path, 'utf8');
+  } catch {
+    return readFile(resolve(MODULE_DIR, path), 'utf8');
+  }
+}
 
 /** A safe fallback used for previews when no content file exists yet. */
 export const SAMPLE_CONTENT = {
@@ -36,7 +56,7 @@ export async function getContent() {
   const path = process.env.CONTENT_FILE || 'content.md';
   let raw;
   try {
-    raw = await readFile(path, 'utf8');
+    raw = await readContentFile(path);
   } catch {
     throw new Error(
       `Content file not found: "${path}". Create it (e.g. run /write-post to write ${path}) ` +
