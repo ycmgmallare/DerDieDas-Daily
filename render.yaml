@@ -1,0 +1,44 @@
+# Render Blueprint — deploys the daily send as a Cron Job.
+#
+# Render Cron Jobs run the start command on a schedule, then exit — a perfect fit
+# for this run-once script (no always-on process or node-cron needed in the cloud).
+#
+# IMPORTANT: Render cron schedules run in UTC. 07:00 Asia/Manila (PHT, UTC+8, no DST)
+# = 23:00 UTC the previous day, hence "0 23 * * *". SEND_TZ still governs the
+# console's date labels.
+#
+# NOTE: the cron reads CONTENT_FILE from the deployed code, so commit your
+# content.md (or point CONTENT_FILE at a source the script can read at runtime).
+#
+# Set the secret env vars (marked sync: false) in the Render dashboard.
+services:
+  - type: cron
+    name: daily-email
+    runtime: node
+    plan: starter
+    schedule: "0 23 * * *"          # 07:00 Asia/Manila
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: EMAIL_AUDIENCE
+        value: personal      # personal (send to yourself) | domain (fan out to subscribers)
+      - key: BRAND_NAME
+        value: Daily Email
+      - key: CONTENT_FILE
+        value: content.md
+      - key: SEND_TZ
+        value: Asia/Manila
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: PUBLIC_BASE_URL
+        sync: false           # only needed in domain mode (for unsubscribe links)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: RESEND_TO
+        sync: false           # personal-mode recipient (also the settings-table default)
